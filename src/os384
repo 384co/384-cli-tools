@@ -24,10 +24,11 @@ if (subcommand in subcommands) {
     });
     const { code } = await process.status();
 } else if(subcommand === 'help' || subcommand === '--help' || subcommand === '-h') {
+    console.log('usage: os384 <subcommand> [args]\n')
     console.log('Available subcommands:')
     for (const key in subcommands) {
         console.log(`- ${key}`);
     }
 } else {
-    console.error(`Unknown subcommand: ${subcommand}`);
+    console.log('usage: os384 <subcommand> [args]\n')
 }

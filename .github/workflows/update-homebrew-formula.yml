@@ -22,7 +22,7 @@ jobs:
         run: |
           VERSION=${{ env.VERSION }}
           REPO=${GITHUB_REPOSITORY}
-          TARBALL_URL="{GITHUB_SERVER_URL}/${REPO}/archive/refs/tags/${VERSION}.tar.gz"
+          TARBALL_URL="${GITHUB_SERVER_URL}/${REPO}/archive/refs/tags/${VERSION}.tar.gz"
           echo "TARBALL_URL=${TARBALL_URL}" >> $GITHUB_ENV
 
       - name: Download tarball and compute SHA256

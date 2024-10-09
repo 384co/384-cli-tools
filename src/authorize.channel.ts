@@ -10,9 +10,12 @@ const DBG0 = true
 
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
-const { OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP } = await import(UTILS_PATH);
-await import(OS384_ENV_PATH)
-await import(OS384_CONFIG_PATH)
+const { 
+    OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP,
+    handleErrorOnImportEnv, handleErrorOnImportConfig
+} = await import(UTILS_PATH);
+await import(OS384_ENV_PATH).catch(handleErrorOnImportEnv)
+await import(OS384_CONFIG_PATH).catch(handleErrorOnImportConfig)
 const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(OS384_ESM_PATH);
 
 const MiB = 1024 * 1024

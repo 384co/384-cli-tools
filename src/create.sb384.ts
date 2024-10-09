@@ -4,9 +4,12 @@ import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
 
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
-const { OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP } = await import(UTILS_PATH);
-await import(OS384_ENV_PATH)
-await import(OS384_CONFIG_PATH)
+const { 
+    OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP,
+    handleErrorOnImportEnv, handleErrorOnImportConfig
+} = await import(UTILS_PATH);
+await import(OS384_ENV_PATH).catch(handleErrorOnImportEnv)
+await import(OS384_CONFIG_PATH).catch(handleErrorOnImportConfig)
 const { SB384 } = await import(OS384_ESM_PATH);
 
 

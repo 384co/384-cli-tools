@@ -9,6 +9,29 @@ export const OS384_ESM_PATH = Deno.env.get('OS384_ESM_PATH') || `${OS384_PATH}/l
 export const OS384_CONFIG_PATH = Deno.env.get('OS384_CONFIG_PATH') || `${OS384_PATH}/config.js`;
 export const OS384_ENV_PATH = Deno.env.get('OS384_ENV_PATH') || `${OS384_PATH}/env.js`;
 
+
+export function handleErrorOnImportEnv() {
+    console.error(
+        `Error importing OS384 environment!
+        To use this script, you must first set up your OS384 environment in a file named env.js.
+
+        By default, this script will look for the file in your home directory, at ~/.os384/env.js.
+        To override this, you can set the environment variable OS384_HOME to the directory where your OS384 environment is stored, or set OS384_ENV_PATH to the path of the env.js file.
+        `)
+    Deno.exit(1);
+}
+
+export function handleErrorOnImportConfig() {
+    console.error(
+        `Error importing OS384 configuration!
+        To use this script, you must first set up your OS384 configuration in a file named config.js.
+
+        By default, this script will look for the file in your home directory, at ~/.os384/config.js.
+        To override this, you can set the environment variable OS384_HOME to the directory where your OS384 configuration is stored, or set OS384_CONFIG_PATH to the path of the config.js file.
+        `)
+    Deno.exit(1);
+}
+
 // we have our own mock version of this for test management
 export class LocalStorage {
     private filePath: string;

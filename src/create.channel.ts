@@ -2,14 +2,17 @@
 
 // takes a storage token, creates a channel (eg a wallet)
 
-import '../env.js'
-import '../config.js'
+import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
 
-// @deno-types="../dist/384.esm.d.ts"
-import { SBStorageToken, ChannelApi } from "../dist/384.esm.js"
+// Dynamic imports, to handle our environment and config possibly living in different places
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const { OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP } = await import(UTILS_PATH);
+await import(OS384_ENV_PATH)
+await import(OS384_CONFIG_PATH)
+const { SBStorageToken, ChannelApi } = await import(OS384_ESM_PATH);
+
 const SB = new ChannelApi(configuration.channelServer)    
 
-import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
 
 async function simpleCreateChannel(tokenHash: string) {
     try {

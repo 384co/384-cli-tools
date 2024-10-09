@@ -2,13 +2,15 @@
 
 // takes a private key for a channel, reads the contents (messages) using streams
 
-import '../env.js'
-import '../config.js'
-
-// @deno-types="../dist/384.esm.d.ts"
-import { ChannelApi, SBUserPrivateKey, channel } from "../dist/384.esm.js"
-
 import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
+
+// Dynamic imports, to handle our environment and config possibly living in different places
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const { OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP } = await import(UTILS_PATH);
+await import(OS384_ENV_PATH)
+await import(OS384_CONFIG_PATH)
+const { ChannelApi, SBUserPrivateKey, channel } = await import(OS384_ESM_PATH);
+
 
 async function streamChannel(privateKey: SBUserPrivateKey, live = false) {
     try {

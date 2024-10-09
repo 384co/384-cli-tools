@@ -4,23 +4,26 @@
 
 // refreshes a token; allows you to bootstrap environment
 
+import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
+
+// Dynamic imports, to handle our environment and config possibly living in different places
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const { OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, LocalStorage, SEP } = await import(UTILS_PATH);
+await import(OS384_ENV_PATH)
+await import(OS384_CONFIG_PATH)
+const {
+    ChannelApi, SBStorageToken, utils
+} = await import(OS384_ESM_PATH);
+
 // default size of token created
 const defaultSize = 60 * 1024 * 1024 * 1024 // 60 GB
 
-import '../env.js'
-import '../config.js'
 const configuration = (window as any).configuration
 
-// @deno-types="../dist/384.esm.d.ts"
-import {
-    ChannelApi, SBStorageToken, utils
-} from "../lib384/384.esm.js"
 const SB = new ChannelApi(configuration.channelServer, /* configuration.DBG */ true)
 
-import { LocalStorage, SEP } from './utils.lib.ts'
 const localStorage = new LocalStorage('./.local.data.json');
 
-import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
 
 // will execute something like this:
 //

@@ -1,14 +1,14 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-net --allow-env
 
-import '../env.js'
-import '../config.js'
-
-// @deno-types="../dist/384.esm.d.ts"
-import { SB384 } from "../dist/384.esm.js"
-
-import { SEP } from "./utils.lib.ts"
-
 import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
+
+// Dynamic imports, to handle our environment and config possibly living in different places
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const { OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP } = await import(UTILS_PATH);
+await import(OS384_ENV_PATH)
+await import(OS384_CONFIG_PATH)
+const { SB384 } = await import(OS384_ESM_PATH);
+
 
 async function newUser(privateKey?: string) {
     let newUser:SB384

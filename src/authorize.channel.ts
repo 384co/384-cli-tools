@@ -4,15 +4,16 @@
 
 // authorizes/creates/funds a channel, either off budget channel (default) or storage token
 
-import '../env.js'
-import '../config.js'
-
 import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
 
-// @deno-types="../dist/384.esm.d.ts"
-import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "../dist/384.esm.js"
+const DBG0 = true
 
-import { SEP } from "./utils.lib.ts"
+// Dynamic imports, to handle our environment and config possibly living in different places
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const { OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP } = await import(UTILS_PATH);
+await import(OS384_ENV_PATH)
+await import(OS384_CONFIG_PATH)
+const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(OS384_ESM_PATH);
 
 const MiB = 1024 * 1024
 const TOP_UP_INCREMENT = 256 * MiB // if there is no such channel, fund it by this amount

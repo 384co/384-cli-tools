@@ -22,9 +22,7 @@ jobs:
         run: |
           VERSION=${{ env.VERSION }}
           REPO=${GITHUB_REPOSITORY}
-          API_URL="https://api.github.com/repos/${REPO}/releases/tags/${VERSION}"
-          echo "Fetching tarball URL for version ${VERSION} from repository ${REPO} at URL ${API_URL}"
-          TARBALL_URL=$(curl -s ${API_URL} | jq -r '.tarball_url')
+          TARBALL_URL="{GITHUB_SERVER_URL}/${REPO}/archive/refs/tags/${VERSION}.tar.gz"
           echo "TARBALL_URL=${TARBALL_URL}" >> $GITHUB_ENV
 
       - name: Download tarball and compute SHA256

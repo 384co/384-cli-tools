@@ -34,7 +34,7 @@ jobs:
 
       - name: Update Homebrew formula
         run: |
-	  FORMULA="Formula/os384-cli.rb"
+          FORMULA="Formula/os384-cli.rb"
           git clone https://github.com/384co/homebrew-os384-cli.git
           cd homebrew-os384-cli
           sed -i '' "s/version \".*\"/version \"${{ env.VERSION }}\"/" $FORMULA

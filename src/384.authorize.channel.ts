@@ -1,5 +1,7 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-net --allow-env
 
+// deno-lint-ignore-file no-explicit-any
+
 // (c) 2024, 384 (tm) Inc
 
 // authorizes/creates/funds a channel, either off budget channel (default) or storage token
@@ -11,19 +13,18 @@ const DBG0 = true
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    VERSION, OS384_ESM_PATH, SEP
+    VERSION, SEP,
 } = await import(UTILS_PATH);
-const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(OS384_ESM_PATH);
+
+// @deno-types="/Users/psm/.os384/384.esm.d.ts"
+import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "/Users/psm/.os384/384.esm.js"
 
 const MiB = 1024 * 1024
 const TOP_UP_INCREMENT = 256 * MiB // if there is no such channel, fund it by this amount
 
-async function authorizeChannel(server?: string, privateKey: string, budget: number, budgetKey: string, token?: SBStorageToken) {
-    let channelServer = server || "https://c.384.dev"
+async function authorizeChannel(channelServer: string, privateKey: string, budget: number, budgetKey: string, token?: SBStorageToken | string) {
     const SB = new ChannelApi(channelServer, false)
-
     const budgetChannel = await SB.connect(budgetKey).ready
-
     let pageChannel = await new Channel(privateKey).ready
     pageChannel.channelServer = channelServer
     try {
@@ -35,7 +36,7 @@ async function authorizeChannel(server?: string, privateKey: string, budget: num
         console.log("Channel storage before operation: ", storage)
         if (token) {
             console.log(SEP, "Adding full token budget to channel ...", SEP)
-            await budgetChannel.budd({ targetChannel: pageChannel.handle, token: token })
+            await budgetChannel.budd({ targetChannel: pageChannel.handle, token: token as SBStorageToken })
             console.log("done")
         } else if (storage.storageLimit < budget) {
             console.log(SEP, "Topping up channel to budget ...", SEP)
@@ -50,7 +51,7 @@ async function authorizeChannel(server?: string, privateKey: string, budget: num
             if (e.message && e.message.includes("No such channel")) {
                 console.log(SEP, "Channel not found, registering and funding ...", SEP)
                 const storageToken = token || await budgetChannel.getStorageToken(budget)
-                pageChannel = await pageChannel.create(storageToken)
+                pageChannel = await pageChannel.create(storageToken as SBStorageToken)
                 console.log("Channel created (authorized/funded): ", pageChannel.handle)
             } else {
                 console.log(SEP, "Error connecting to channel with private key: ", e, SEP)
@@ -74,7 +75,7 @@ await new Command()
         you provide a storage token, that full amount will be used, regardless of
         the budget amount.
     `)
-    .option("-s, --server <server:string>", "(optional) Channel server to use", { required: false })
+    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: "https://c3.384.dev" })
     .option("-k, --key <key:string>", "Private key to use", { required: true })
     .option("-b, --budget <budget:number>", "(optional) Budget amount", { default: TOP_UP_INCREMENT })
     .option("-B, --budget-key <budget:string>", "Budget channel key", { required: true })

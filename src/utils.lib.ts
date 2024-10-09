@@ -8,8 +8,9 @@ export const SEP_ = '-'.repeat(86) + '\n'
 const HOME_DIR_PATH = Deno.os === 'windows' ? Deno.env.get('USERPROFILE') : Deno.env.get('HOME');
 const OS384_PATH = Deno.env.get('OS384_HOME') || HOME_DIR_PATH + '/.os384';
 export const OS384_ESM_PATH = Deno.env.get('OS384_ESM_PATH') || `${OS384_PATH}/lib384/384.esm.js`;
-export const OS384_CONFIG_PATH = Deno.env.get('OS384_CONFIG_PATH') || `${OS384_PATH}/config.js`;
-export const OS384_ENV_PATH = Deno.env.get('OS384_ENV_PATH') || `${OS384_PATH}/env.js`;
+
+export const URL_FOR_LIB384_D_TS="https://c3.384.dev/api/v2/page/u2d23u7w/384.esm.d.ts"
+export const URL_FOR_384_ESM_JS="https://c3.384.dev/api/v2/page/7938Nx0wM39T/384.esm.js"
 
 
 export function handleErrorOnImportEnv() {

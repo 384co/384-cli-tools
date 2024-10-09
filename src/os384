@@ -4,6 +4,11 @@
 
 // convenience script to run various os384 cli tools as subcommands
 
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const {
+    VERSION
+} = await import(UTILS_PATH);
+
 const subcommands = {
     'authorize-channel': '384.authorize.channel.ts',
     'create-channel': '384.create.channel.ts',
@@ -29,6 +34,8 @@ if (subcommand in subcommands) {
     for (const key in subcommands) {
         console.log(`- ${key}`);
     }
+} else if (subcommand === 'version' || subcommand === '--version' || subcommand === '-v') {
+    console.log(VERSION)
 } else {
     console.log('usage: os384 <subcommand> [args]\n')
 }

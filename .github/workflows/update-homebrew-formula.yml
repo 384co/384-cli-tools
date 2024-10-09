@@ -1,0 +1,56 @@
+name: Update Homebrew Formula
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'  # Trigger on tags of the form x.y.z
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Get tarball URL for the specific version
+        id: get_tarball_url
+        run: |
+          VERSION=${{ env.VERSION }}
+          REPO=${GITHUB_REPOSITORY}
+          TARBALL_URL=$(curl -s https://api.github.com/repos/${REPO}/releases/tags/${VERSION} | jq -r '.tarball_url')
+          echo "TARBALL_URL=${TARBALL_URL}" >> $GITHUB_ENV
+
+      - name: Download tarball and compute SHA256
+        id: compute_sha256
+        run: |
+          curl -L ${{ env.TARBALL_URL }} -o release.tar.gz
+          SHA256=$(sha256sum release.tar.gz | awk '{ print $1 }')
+          echo "SHA256=${SHA256}" >> $GITHUB_ENV
+
+      - name: Update Homebrew formula
+        run: |
+	  FORMULA="Formula/os384-cli.rb"
+          git clone https://github.com/384co/homebrew-os384-cli.git
+          cd homebrew-os384-cli
+          sed -i '' "s/version \".*\"/version \"${{ env.VERSION }}\"/" $FORMULA
+          sed -i '' "s/sha256 \".*\"/sha256 \"${{ env.SHA256 }}\"/" $FORMULA
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $FORMULA
+          git commit -m "Update ${FORMULA} to version ${{ env.VERSION }}"
+          git push
+
+      - name: Create a release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: Release ${{ env.VERSION }}
+          draft: false
+          prerelease: false

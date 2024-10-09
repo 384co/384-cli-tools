@@ -36,7 +36,7 @@ jobs:
         run: |
           FORMULA_TEMPLATE="Formula/os384-cli.rb.template"
           FORMULA="Formula/os384-cli.rb"
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/384co/homebrew-os384-cli.git
+          git clone https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/384co/homebrew-os384-cli.git
           cd homebrew-os384-cli
           cp $FORMULA_TEMPLATE $FORMULA
           sed -i "s|{{ VERSION }}|\"${{ env.VERSION }}\"|g" $FORMULA

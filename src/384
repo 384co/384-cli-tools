@@ -29,7 +29,7 @@ if (subcommand in subcommands) {
     });
     const { code } = await process.status();
 } else if(subcommand === 'help' || subcommand === '--help' || subcommand === '-h') {
-    console.log('usage: os384 <subcommand> [args]\n')
+    console.log('usage: 384 <subcommand> [args]\n')
     console.log('Available subcommands:')
     for (const key in subcommands) {
         console.log(`- ${key}`);
@@ -37,5 +37,5 @@ if (subcommand in subcommands) {
 } else if (subcommand === 'version' || subcommand === '--version' || subcommand === '-v') {
     console.log(VERSION)
 } else {
-    console.log('usage: os384 <subcommand> [args]\n')
+    console.log('usage: 384 <subcommand> [args]\n')
 }

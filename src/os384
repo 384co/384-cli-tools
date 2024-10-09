@@ -1,0 +1,33 @@
+#!/usr/bin/env -S deno run --allow-run
+
+// (c) 2024, 384 (tm) Inc
+
+// convenience script to run various os384 cli tools as subcommands
+
+const subcommands = {
+    'authorize-channel': '384.authorize.channel.ts',
+    'create-channel': '384.create.channel.ts',
+    'create-sb384': '384.create.sb384.ts',
+    'refresh-token': '384.refresh.token.ts',
+    'stream-channel': '384.stream.channel.ts',
+};
+
+const args = Deno.args;
+const subcommand = args[0];
+
+if (subcommand in subcommands) {
+    const scriptPath = subcommands[subcommand];
+    const process = Deno.run({
+        cmd: [scriptPath, ...args.slice(1)],
+        stdout: 'inherit',
+        stderr: 'inherit',
+    });
+    const { code } = await process.status();
+} else if(subcommand === 'help' || subcommand === '--help' || subcommand === '-h') {
+    console.log('Available subcommands:')
+    for (const key in subcommands) {
+        console.log(`- ${key}`);
+    }
+} else {
+    console.error(`Unknown subcommand: ${subcommand}`);
+}

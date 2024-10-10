@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-net --allow-env
+#!/usr/bin/env -S deno run --allow-read --allow-write --allow-net --allow-env --allow-import
 
 // takes a storage token, creates a channel (eg a wallet)
 

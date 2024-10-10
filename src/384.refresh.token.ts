@@ -15,8 +15,8 @@ const {
     LocalStorage,
 } = await import(UTILS_PATH);
 // @deno-types="../lib/384.esm.d.ts"
-import { ChannelApi, SBStorageToken, utils } from "../lib/384.esm.js"
-//const { ChannelApi, SBStorageToken, utils } = await import(URL_FOR_384_ESM_JS);
+//import { ChannelApi, SBStorageToken, utils } from "../lib/384.esm.js"
+const { ChannelApi, SBStorageToken, utils } = await import(URL_FOR_384_ESM_JS);
 
 // default size of token created
 const defaultSize = 60 * 1024 * 1024 * 1024 // 60 GB

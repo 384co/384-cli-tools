@@ -10,8 +10,8 @@ const {
     VERSION, SEP, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);
 // @deno-types="../lib/384.esm.d.ts"
-import { ChannelApi, ChannelStream, SBUserPrivateKey, channel } from "../lib/384.esm.js"
-//const { ChannelApi, ChannelStream, SBUserPrivateKey, channel } = await import(URL_FOR_384_ESM_JS);
+//import { ChannelApi, ChannelStream, SBUserPrivateKey, channel } from "../lib/384.esm.js"
+const { ChannelApi, ChannelStream, SBUserPrivateKey, channel } = await import(URL_FOR_384_ESM_JS);
 
 
 async function streamChannel(server: string, channel: string, live = false) {

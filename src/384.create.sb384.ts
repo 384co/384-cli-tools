@@ -5,15 +5,13 @@ import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP,
-    handleErrorOnImportEnv, handleErrorOnImportConfig
+    VERSION, SEP, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);
-await import(OS384_ENV_PATH).catch(handleErrorOnImportEnv)
-await import(OS384_CONFIG_PATH).catch(handleErrorOnImportConfig)
-const { SB384 } = await import(OS384_ESM_PATH);
+// @deno-types="../lib/384.esm.d.ts"
+import { SB384 } from "../lib/384.esm.js"
+//const { SB384 } = await import(URL_FOR_384_ESM_JS);
 
-
-async function newUser(privateKey?: string) {
+async function newUser(server: string, privateKey?: string) {
     let newUser:SB384
     if (privateKey)
         newUser = await new SB384(privateKey).ready
@@ -40,15 +38,16 @@ async function newUser(privateKey?: string) {
 }
 
 await new Command()
-    .name("create.sb384.ts")
-    .version("1.0.0")
+    .name("384.create.sb384.ts")
+    .version(VERSION)
     .description(`
         Creates a fresh sb384 object. Optionally you can provide the private
         key string for an existing user, in which case you'll get it parsed
         into the various formats.
     `)
+    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
     .option("-k, --key <key:string>", "(Optional) Use this private key instead of creating a new one.", { required: false })
-    .action(async ({ key }) => {
-        await newUser(key);
+    .action(async ({ server, key }) => {
+        await newUser(server, key);
     })
     .parse(Deno.args);

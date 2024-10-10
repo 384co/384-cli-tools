@@ -13,7 +13,7 @@ const DBG0 = true
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    VERSION, SEP, URL_FOR_384_ESM_JS
+    VERSION, SEP, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);
 
 // @deno-types="../lib/384.esm.d.ts"
@@ -76,7 +76,7 @@ await new Command()
         you provide a storage token, that full amount will be used, regardless of
         the budget amount.
     `)
-    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: "https://c3.384.dev" })
+    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
     .option("-c, --channel <channel:string>", "Channel to authorize", { required: true })
     .option("-a, --amount <amount:number>", "(optional) Budget amount", { default: TOP_UP_INCREMENT })
     .option("-b, --budget <budget:string>", "Budget key", { required: true })

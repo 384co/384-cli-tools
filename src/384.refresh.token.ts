@@ -8,25 +8,21 @@ import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
 
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
-const { 
-    OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP,
-    LocalStorage,
-    handleErrorOnImportEnv, handleErrorOnImportConfig
-} = await import(UTILS_PATH);
-await import(OS384_ENV_PATH).catch(handleErrorOnImportEnv)
-await import(OS384_CONFIG_PATH).catch(handleErrorOnImportConfig)
 const {
-    ChannelApi, SBStorageToken, utils
-} = await import(OS384_ESM_PATH);
+    VERSION,
+    OS384_PATH, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER,
+    SEP,
+    LocalStorage,
+} = await import(UTILS_PATH);
+// @deno-types="../lib/384.esm.d.ts"
+import { ChannelApi, SBStorageToken, utils } from "../lib/384.esm.js"
+//const { ChannelApi, SBStorageToken, utils } = await import(URL_FOR_384_ESM_JS);
 
 // default size of token created
 const defaultSize = 60 * 1024 * 1024 * 1024 // 60 GB
 
-const configuration = (window as any).configuration
 
-const SB = new ChannelApi(configuration.channelServer, /* configuration.DBG */ true)
-
-const localStorage = new LocalStorage('./.local.data.json');
+const localStorage = new LocalStorage(`${OS384_PATH}/.local.data.json`);
 
 
 // will execute something like this:
@@ -41,7 +37,9 @@ const localStorage = new LocalStorage('./.local.data.json');
 
 const CHANNEL_SERVER_WORKING_DIRECTORY = "../channels-cloudflare"
 
-export async function refreshToken(local: boolean, size: number, tokenHash?: string): Promise<string | null> {
+export async function refreshToken(server: string, amount: number, tokenHash?: string): Promise<string | null> {
+    const local = new URL(server).hostname === "localhost"
+    const SB = new ChannelApi(server, true)
     try {
         if (!tokenHash) {
             const SBStorageTokenPrefix = 'LM2r' // random prefix
@@ -50,7 +48,7 @@ export async function refreshToken(local: boolean, size: number, tokenHash?: str
         const token: SBStorageToken = {
             hash: tokenHash!,
             used: false,
-            size: size,
+            size: amount,
             motherChannel: "<WRANGLER>",
         }
         console.log(SEP, "Will set token to:\n", JSON.stringify(token, null, 2), '\n', SEP)
@@ -116,17 +114,17 @@ export async function refreshToken(local: boolean, size: number, tokenHash?: str
 
 
 // we then consume the token to create a new channel
-async function generateToken(token: string | undefined, size = defaultSize) {
+async function generateToken(server: string, token: string | undefined, amount = defaultSize) {
     try {
-        let savedTokenHash: string | undefined = localStorage.getItem(configuration.channelServer + '_refresh_token') || undefined
+        let savedTokenHash: string | undefined = localStorage.getItem(server + '_refresh_token') || undefined
 
         const tokenHash = await refreshToken(
-            configuration.configServerType === 'local',
-            size,
+            server,
+            amount,
             token || savedTokenHash);
 
         if (savedTokenHash !== tokenHash) {
-            localStorage.setItem(configuration.channelServer + '_refresh_token', tokenHash)
+            localStorage.setItem(server + '_refresh_token', tokenHash)
             console.log("++++++++ Generated new token for channel creation ++++++++")
             console.log(tokenHash)
             console.log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -151,17 +149,18 @@ async function generateToken(token: string | undefined, size = defaultSize) {
 }
     
 await new Command()
-    .name("refresh.token.ts")
-    .version("1.0.0")
+    .name("384.refresh.token.ts")
+    .version(VERSION)
     .description(`
         Refreshes (and if needed creates) a storage token. Defaults to ${defaultSize} bytes.
         Maintains a 'global' hash that can be refreshed, unless you override with a specific token.
         This needs to be run from the channel server directory (requires wrangler authentication).
     `)
-    .option("-s, --size <size:number>", "Specifies desired token size (optional).", { required: false })
+    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
+    .option("-a, --amount <amount:number>", "Amount of storage to allocate (optional).", { required: false })
     .option("-t, --token <token:string>", "Force using this token hash (optional).", { required: false })
-    .action(async ({ token, size }) => {
-        await generateToken(token, size);
+    .action(async ({ server, token, amount }) => {
+        await generateToken(server, token, amount);
     })
     .parse(Deno.args);
     

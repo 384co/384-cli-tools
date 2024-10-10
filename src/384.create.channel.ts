@@ -7,7 +7,7 @@ import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    URL_FOR_384_ESM_JS, SEP,
+    VERSION, URL_FOR_384_ESM_JS, SEP, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);
 // @deno-types="../lib/384.esm.d.ts"
 import { SBStorageToken, ChannelApi } from "../lib/384.esm.js"
@@ -47,13 +47,13 @@ async function simpleCreateChannel(server: string, tokenHash: string) {
 }
 
 await new Command()
-    .name("create.channel.ts")
-    .version("1.0.0")
+    .name("384.create.channel.ts")
+    .version(VERSION)
     .description(`
         Creates a channel using the provided storage token. Will fail if the token has been consumed.
         You can create (bootstrap) tokens using 'refresh.token.ts'.
     `)
-    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: "https://c3.384.dev" })
+    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
     .option("-t, --token <token:string>", "Storage token (hash).", { required: true })
     .action(async ({ server, token }) => {
         await simpleCreateChannel(server, token);

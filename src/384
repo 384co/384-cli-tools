@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-run
+#!/usr/bin/env -S deno run --allow-run --allow-read --allow-env
 
 // (c) 2024, 384 (tm) Inc
 

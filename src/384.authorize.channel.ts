@@ -13,19 +13,20 @@ const DBG0 = true
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    VERSION, SEP,
+    VERSION, SEP, URL_FOR_384_ESM_JS
 } = await import(UTILS_PATH);
 
-// @deno-types="/Users/psm/.os384/384.esm.d.ts"
-import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "/Users/psm/.os384/384.esm.js"
+// @deno-types="../lib/384.esm.d.ts"
+import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "../lib/384.esm.js"
+//const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } await import(URL_FOR_384_ESM_JS)
 
 const MiB = 1024 * 1024
 const TOP_UP_INCREMENT = 256 * MiB // if there is no such channel, fund it by this amount
 
-async function authorizeChannel(channelServer: string, privateKey: string, budget: number, budgetKey: string, token?: SBStorageToken | string) {
+async function authorizeChannel(channelServer: string, channelKey: string, amount: number, budgetKey: string, token?: SBStorageToken | string) {
     const SB = new ChannelApi(channelServer, false)
     const budgetChannel = await SB.connect(budgetKey).ready
-    let pageChannel = await new Channel(privateKey).ready
+    let pageChannel = await new Channel(channelKey).ready
     pageChannel.channelServer = channelServer
     try {
         // make sure channel is served by this server
@@ -38,9 +39,9 @@ async function authorizeChannel(channelServer: string, privateKey: string, budge
             console.log(SEP, "Adding full token budget to channel ...", SEP)
             await budgetChannel.budd({ targetChannel: pageChannel.handle, token: token as SBStorageToken })
             console.log("done")
-        } else if (storage.storageLimit < budget) {
+        } else if (storage.storageLimit < amount) {
             console.log(SEP, "Topping up channel to budget ...", SEP)
-            await budgetChannel.budd({ targetChannel: pageChannel.handle, size: budget - storage.storageLimit })
+            await budgetChannel.budd({ targetChannel: pageChannel.handle, size: amount - storage.storageLimit })
             console.log("done")
         } else {
             console.log(SEP, "Channel already funded to budget amount.", SEP)
@@ -50,7 +51,7 @@ async function authorizeChannel(channelServer: string, privateKey: string, budge
         try {
             if (e.message && e.message.includes("No such channel")) {
                 console.log(SEP, "Channel not found, registering and funding ...", SEP)
-                const storageToken = token || await budgetChannel.getStorageToken(budget)
+                const storageToken = token || await budgetChannel.getStorageToken(amount)
                 pageChannel = await pageChannel.create(storageToken as SBStorageToken)
                 console.log("Channel created (authorized/funded): ", pageChannel.handle)
             } else {
@@ -76,11 +77,11 @@ await new Command()
         the budget amount.
     `)
     .option("-s, --server <server:string>", "(optional) Channel server to use", { default: "https://c3.384.dev" })
-    .option("-k, --key <key:string>", "Private key to use", { required: true })
-    .option("-b, --budget <budget:number>", "(optional) Budget amount", { default: TOP_UP_INCREMENT })
-    .option("-B, --budget-key <budget:string>", "Budget channel key", { required: true })
+    .option("-c, --channel <channel:string>", "Channel to authorize", { required: true })
+    .option("-a, --amount <amount:number>", "(optional) Budget amount", { default: TOP_UP_INCREMENT })
+    .option("-b, --budget <budget:string>", "Budget key", { required: true })
     .option("-t, --token <token:string>", "(optional) Use this storage token instead of the budget channel.", { required: false })
-    .action(async ({ server, key, budget, budgetKey, token }) => {
-        await authorizeChannel(server, key, budget, budgetKey, token);
+    .action(async ({ server, channel, amount, budget, token }) => {
+        await authorizeChannel(server, channel, amount, budget, token);
     })
     .parse(Deno.args);

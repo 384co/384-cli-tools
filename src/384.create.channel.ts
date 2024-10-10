@@ -7,17 +7,15 @@ import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    OS384_CONFIG_PATH, OS384_ENV_PATH, OS384_ESM_PATH, SEP,
-    handleErrorOnImportEnv, handleErrorOnImportConfig
+    URL_FOR_384_ESM_JS, SEP,
 } = await import(UTILS_PATH);
-await import(OS384_ENV_PATH).catch(handleErrorOnImportEnv)
-await import(OS384_CONFIG_PATH).catch(handleErrorOnImportConfig)
-const { SBStorageToken, ChannelApi } = await import(OS384_ESM_PATH);
-
-const SB = new ChannelApi(configuration.channelServer)    
+// @deno-types="../lib/384.esm.d.ts"
+import { SBStorageToken, ChannelApi } from "../lib/384.esm.js"
+//const { SBStorageToken, ChannelApi } = await import(URL_FOR_384_ESM_JS);
 
 
-async function simpleCreateChannel(tokenHash: string) {
+async function simpleCreateChannel(server: string, tokenHash: string) {
+    const SB = new ChannelApi(server)    
     try {
         console.log("This bootstraps from a token; if token has been consumed it'll fail")
         
@@ -32,7 +30,7 @@ async function simpleCreateChannel(tokenHash: string) {
         console.log(
             "\n",
             "==========================================================================\n",
-            "Channel details. Suitable for copy-paste into 'env.js' for example:\n",
+            "Channel details\n",
             "==========================================================================\n",
             JSON.stringify(newChannel, null, 2), "\n",
             "==========================================================================\n",
@@ -55,8 +53,9 @@ await new Command()
         Creates a channel using the provided storage token. Will fail if the token has been consumed.
         You can create (bootstrap) tokens using 'refresh.token.ts'.
     `)
+    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: "https://c3.384.dev" })
     .option("-t, --token <token:string>", "Storage token (hash).", { required: true })
-    .action(async ({ token }) => {
-        await simpleCreateChannel(token);
+    .action(async ({ server, token }) => {
+        await simpleCreateChannel(server, token);
     })
     .parse(Deno.args);

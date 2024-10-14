@@ -25,7 +25,8 @@ const TOP_UP_INCREMENT = 256 * MiB // if there is no such channel, fund it by th
 
 async function authorizeChannel(channelServer: string, channelKey: string, amount: number, budgetKey: string, token?: SBStorageToken | string) {
     const SB = new ChannelApi(channelServer, false)
-    const budgetChannel = await SB.connect(budgetKey).ready
+    const budgetChannel = SB.connect(budgetKey)
+
     let pageChannel = await new Channel(channelKey).ready
     pageChannel.channelServer = channelServer
     try {

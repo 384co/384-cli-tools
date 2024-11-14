@@ -24,6 +24,7 @@ const { ChannelApi } = await import(URL_FOR_384_ESM_JS)
 async function shardify(channelServer: string, budgetKey: string, url: string, output: string) {
     const SB = new ChannelApi(channelServer)
     const budgetChannel = SB.connect(budgetKey)
+    const storageServer = await SB.getStorageServer()
 
     // read the data from the URL
     const response = await fetch(url)

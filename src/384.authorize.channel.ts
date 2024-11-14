@@ -6,7 +6,7 @@
 
 // authorizes/creates/funds a channel, either off budget channel (default) or storage token
 
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
+import { Command } from 'jsr:@cliffy/command@1.0.0-rc.4';
 
 const DBG0 = true
 

@@ -2,7 +2,7 @@
 
 // takes a storage token, creates a channel (eg a wallet)
 
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
+import { Command } from 'jsr:@cliffy/command@1.0.0-rc.4';
 
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname

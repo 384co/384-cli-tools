@@ -63,7 +63,6 @@ async function authorizeChannel(channelServer: string, channelKey: string, amoun
             console.log(SEP, "Error creating channel: ", e, SEP)
             Deno.exit(1)
         }
-        console.error(e)
     }
     console.log(SEP, "Channel authorized/funded.", SEP)
 }

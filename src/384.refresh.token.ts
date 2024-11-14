@@ -4,13 +4,15 @@
 
 // refreshes a token; allows you to bootstrap environment
 
+import { existsSync } from "https://deno.land/std@0.114.0/fs/mod.ts";
+
 import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
 
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const {
     VERSION,
-    OS384_PATH, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER,
+    OS384_PATH, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER, CHANNEL_SERVER_HOME_DIRECTORY,
     SEP,
     LocalStorage,
 } = await import(UTILS_PATH);
@@ -35,9 +37,19 @@ const localStorage = new LocalStorage(`${OS384_PATH}/.local.data.json`);
 // work. upon success returns the token hash (which will be new if you didn't
 // provide one)
 
-const CHANNEL_SERVER_WORKING_DIRECTORY = "../channels-cloudflare"
-
 export async function refreshToken(server: string, amount: number, tokenHash?: string): Promise<string | null> {
+    // IF a channel server directory is not provided in the environment, then we default to the current directory
+    // This will only work if you are running from the directory where you have the channel server
+    const channelServerDirectory = CHANNEL_SERVER_HOME_DIRECTORY || "."
+
+    // Verify that the .wrangler subdirectory exists in what we think is channel server home
+    // Otherwise throw an error
+    const wranglerDirectory = channelServerDirectory + "/.wrangler"
+    if (!existsSync(wranglerDirectory)) {
+        console.error("It looks like you are not running this script from the channel server directory. To run from a different directory, set the environment variable OS384_CHANNEL_SERVER_HOME to the channel server directory.");
+        throw new Error("Channel server directory not found");
+    }
+
     const local = new URL(server).hostname === "localhost"
     const SB = new ChannelApi(server, true)
     try {
@@ -60,7 +72,7 @@ export async function refreshToken(server: string, amount: number, tokenHash?: s
                 cmd: ["wrangler", "kv:key", "put", "--preview", "--binding=LEDGER_NAMESPACE", "--local", tokenHash, tokenString],
                 stdout: "piped",
                 stderr: "piped",
-                cwd: CHANNEL_SERVER_WORKING_DIRECTORY,
+                cwd: channelServerDirectory,
             });
         } else {
             console.log("Refreshing storage token - NOT local")
@@ -69,7 +81,7 @@ export async function refreshToken(server: string, amount: number, tokenHash?: s
                 cmd: ["wrangler", "kv:key", "put", "--preview", "false", "--binding=LEDGER_NAMESPACE", tokenHash, tokenString],
                 stdout: "piped",
                 stderr: "piped",
-                cwd: CHANNEL_SERVER_WORKING_DIRECTORY,
+                cwd: channelServerDirectory,
             });
         }
 
@@ -129,16 +141,6 @@ async function generateToken(server: string, token: string | undefined, amount =
             console.log(tokenHash)
             console.log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         }
-
-        // console.log("Token refresh succeeded, will now create a channel. Token hash:", tokenHash, "(will pause 1 second)")
-        // // wait/sleep just a little bit
-        // await new Promise((resolve) => setTimeout(resolve, 1000))
-        // if (tokenHash) {
-        //     await simpleCreateChannel(tokenHash)
-        // } else {
-        //     console.log("Skipping rest of token creation because token refresh failed")
-        // }
-        // console.log("It all worked; we were using token hash:", tokenHash)
 
         console.log(SEP, "Token refresh (creation) succeeded:", tokenHash, SEP)
 

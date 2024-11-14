@@ -15,6 +15,8 @@ export const URL_FOR_384_ESM_JS="https://c3.384.dev/api/v2/page/7938Nx0wM39T/384
 export const DEFAULT_CHANNEL_SERVER = Deno.env.get('OS384_CHANNEL_SERVER') || "https://c3.384.dev"
 export const DEFAULT_STORAGE_SERVER = Deno.env.get('OS384_STORAGE_SERVER') || "https://s3.384.dev"
 
+export const CHANNEL_SERVER_HOME_DIRECTORY = Deno.env.get('OS384_CHANNEL_SERVER_HOME')
+
 export function handleErrorOnImportEnv() {
     console.error(
         `Error importing OS384 environment!

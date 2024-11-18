@@ -163,6 +163,7 @@ await new Command()
     .option("-t, --token <token:string>", "Force using this token hash (optional).", { required: false })
     .action(async ({ server, token, amount }) => {
         await generateToken(server, token, amount);
+        Deno.exit(0);
     })
     .parse(Deno.args);
     

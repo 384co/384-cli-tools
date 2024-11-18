@@ -39,5 +39,6 @@ await new Command()
     .option("-l, --live", "Enable live streaming.", { default: false })
     .action(async ({ server, channel, live }) => {
         await streamChannel(server, channel, live);
+        Deno.exit(0);
     })
     .parse(Deno.args);

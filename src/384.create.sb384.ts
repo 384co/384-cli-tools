@@ -49,5 +49,6 @@ await new Command()
     .option("-k, --key <key:string>", "(Optional) Use this private key instead of creating a new one.", { required: false })
     .action(async ({ server, key }) => {
         await newUser(server, key);
+        Deno.exit(0);
     })
     .parse(Deno.args);

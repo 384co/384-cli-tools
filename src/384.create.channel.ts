@@ -57,5 +57,6 @@ await new Command()
     .option("-t, --token <token:string>", "Storage token (hash).", { required: true })
     .action(async ({ server, token }) => {
         await simpleCreateChannel(server, token);
+        Deno.exit(0);
     })
     .parse(Deno.args);

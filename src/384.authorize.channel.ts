@@ -83,5 +83,6 @@ await new Command()
     .option("-t, --token <token:string>", "(optional) Use this storage token instead of the budget channel.", { required: false })
     .action(async ({ server, channel, amount, budget, token }) => {
         await authorizeChannel(server, channel, amount, budget, token);
+        Deno.exit(0);
     })
     .parse(Deno.args);

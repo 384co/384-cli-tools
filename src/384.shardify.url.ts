@@ -76,5 +76,6 @@ await new Command()
     .option("-o, --output <output:string>", "Output type", { default: "nostr" })
     .action(async ({ server, budget, url, output }) => {
         await shardify(server, budget, url, output);
+        Deno.exit(0);
     })
     .parse(Deno.args);

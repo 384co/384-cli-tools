@@ -12,7 +12,7 @@ const {
 const { SB384 } = await import(URL_FOR_384_ESM_JS);
 
 async function newUser(server: string, privateKey?: string) {
-    let newUser:SB384
+    let newUser: SB384
     if (privateKey)
         newUser = await new SB384(privateKey).ready
     else
@@ -33,7 +33,7 @@ async function newUser(server: string, privateKey?: string) {
     if (privateKey)
         console.log(SEP)
     else
-        console.log(SEP, "Reminder: all you need is the userPrivateKey, try:", '\n', `create.sb384.ts -k ${newUser.userPrivateKey}`, SEP)
+        console.log(SEP, "Reminder: all you need is the userPrivateKey, try:", '\n', `384.create.sb384.ts -k ${newUser.userPrivateKey}`, SEP)
 
 }
 

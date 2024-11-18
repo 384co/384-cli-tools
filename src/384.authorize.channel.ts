@@ -37,7 +37,12 @@ async function authorizeChannel(channelServer: string, channelKey: string, amoun
         console.log("Channel storage before operation: ", storage)
         if (token) {
             console.log(SEP, "Adding full token budget to channel ...", SEP)
-            await budgetChannel.budd({ targetChannel: pageChannel.handle, token: token as SBStorageToken })
+            if (budgetKey) {
+                const budgetChannel = SB.connect(budgetKey)
+                await budgetChannel.budd({ targetChannel: pageChannel.handle, token: token as SBStorageToken })
+            } else {
+                await pageChannel.create(token as SBStorageToken, channelServer);
+            }
             console.log("done")
         } else if (storage.storageLimit < amount) {
             console.log(SEP, "Topping up channel to budget ...", SEP)
@@ -93,7 +98,7 @@ await new Command()
     .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
     .option("-c, --channel <channel:string>", "Channel to authorize", { required: true })
     .option("-a, --amount <amount:number>", "(optional) Budget amount", { default: TOP_UP_INCREMENT })
-    .option("-b, --budget <budget:string>", "Budget key", { required: false })
+    .option("-b, --budget <budget:string>", "Budget channel key", { required: false })
     .option("-t, --token <token:string>", "(optional) Use this storage token instead of the budget channel.", { required: false })
     .action(async ({ server, channel, amount, budget, token }) => {
         if (!budget && !token) {

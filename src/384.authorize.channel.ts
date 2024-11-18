@@ -23,9 +23,8 @@ const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(U
 const MiB = 1024 * 1024
 const TOP_UP_INCREMENT = 256 * MiB // if there is no such channel, fund it by this amount
 
-async function authorizeChannel(channelServer: string, channelKey: string, amount: number, budgetKey: string, token?: SBStorageToken | string) {
+async function authorizeChannel(channelServer: string, channelKey: string, amount: number, budgetKey?: string, token?: SBStorageToken | string) {
     const SB = new ChannelApi(channelServer, false)
-    const budgetChannel = SB.connect(budgetKey)
 
     let pageChannel = await new Channel(channelKey).ready
     pageChannel.channelServer = channelServer
@@ -42,8 +41,14 @@ async function authorizeChannel(channelServer: string, channelKey: string, amoun
             console.log("done")
         } else if (storage.storageLimit < amount) {
             console.log(SEP, "Topping up channel to budget ...", SEP)
-            await budgetChannel.budd({ targetChannel: pageChannel.handle, size: amount - storage.storageLimit })
-            console.log("done")
+            if (budgetKey) {
+                const budgetChannel = SB.connect(budgetKey)
+                await budgetChannel.budd({ targetChannel: pageChannel.handle, size: amount - storage.storageLimit })
+                console.log("done")
+            } else {
+                console.error("No budget key provided, cannot top up channel.")
+                Deno.exit(1);
+            }
         } else {
             console.log(SEP, "Channel already funded to budget amount.", SEP)
         }
@@ -52,9 +57,18 @@ async function authorizeChannel(channelServer: string, channelKey: string, amoun
         try {
             if (e.message && e.message.includes("No such channel")) {
                 console.log(SEP, "Channel not found, registering and funding ...", SEP)
-                const storageToken = token || await budgetChannel.getStorageToken(amount)
-                pageChannel = await pageChannel.create(storageToken as SBStorageToken)
-                console.log("Channel created (authorized/funded): ", pageChannel.handle)
+                if (token) {
+                    pageChannel = await pageChannel.create(token as SBStorageToken)
+                    console.log("Channel created (authorized/funded): ", pageChannel.handle)
+                } else if (budgetKey) {
+                    const budgetChannel = SB.connect(budgetKey)
+                    const storageToken = await budgetChannel.getStorageToken(amount)
+                    pageChannel = await pageChannel.create(storageToken as SBStorageToken)
+                    console.log("Channel created (authorized/funded): ", pageChannel.handle)
+                } else {
+                    console.error("Channel does not exist, and no budget or storage token was provided to create it.");
+                    Deno.exit(1);
+                }
             } else {
                 console.log(SEP, "Error connecting to channel with private key: ", e, SEP)
                 Deno.exit(1)
@@ -79,9 +93,13 @@ await new Command()
     .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
     .option("-c, --channel <channel:string>", "Channel to authorize", { required: true })
     .option("-a, --amount <amount:number>", "(optional) Budget amount", { default: TOP_UP_INCREMENT })
-    .option("-b, --budget <budget:string>", "Budget key", { required: true })
+    .option("-b, --budget <budget:string>", "Budget key", { required: false })
     .option("-t, --token <token:string>", "(optional) Use this storage token instead of the budget channel.", { required: false })
     .action(async ({ server, channel, amount, budget, token }) => {
+        if (!budget && !token) {
+            console.error("Error: You must provide at least one of --budget (-b) or --token (-t)");
+            Deno.exit(1);
+        }
         await authorizeChannel(server, channel, amount, budget, token);
         Deno.exit(0);
     })

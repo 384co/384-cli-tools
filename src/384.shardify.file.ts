@@ -74,7 +74,7 @@ await new Command()
     .name("384.shardify.url.ts")
     .version(VERSION)
     .description(`
-        Fetches whatever is at the URL and shardifies it.
+        Uploads the file contents to a shard on a 384 storage server
     `)
     .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
     .option("-b, --budget <budget:string>", "Private key to use as budget channel", { required: true })

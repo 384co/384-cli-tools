@@ -16,6 +16,7 @@ const subcommands = {
     'refresh-token': '384.refresh.token.ts',
     'shardify-url': '384.shardify.url.ts',
     'shardify-file': '384.shardify.file.ts',
+    'save-as-shard': '384.save.as.shard.ts',
     'stream-channel': '384.stream.channel.ts',
 };
 

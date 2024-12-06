@@ -1,17 +1,22 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import '../env.js'
-import '../config.js'
 
+import { Command } from 'jsr:@cliffy/command@1.0.0-rc.4';
+
+// Dynamic imports, to handle our environment and config possibly living in different places
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const { 
+    VERSION, URL_FOR_384_ESM_JS, SEP, DEFAULT_CHANNEL_SERVER
+} = await import(UTILS_PATH);
 // @deno-types="../dist/384.esm.d.ts"
-import { ChannelApi, version } from "../dist/384.esm.js"
-import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
+//import { ChannelApi, version } from "../dist/384.esm.js"
+const { ChannelApi, version } = await import(URL_FOR_384_ESM_JS);
 
-const SEP = '\n' + '='.repeat(60) + '\n';
+//const SEP = '\n' + '='.repeat(60) + '\n';
 
-let SB = new ChannelApi(configuration.channelServer, configuration.DBG)
 
 async function uploadFile(
+    server: string,
     filePath: string,
     budgetKey: string,
     minimal: boolean = false
@@ -19,6 +24,8 @@ async function uploadFile(
     // Read and upload file
     const data = await Deno.readFile(filePath);
     const bytes = new Uint8Array(data.buffer);
+
+    let SB = new ChannelApi(server)
 
     // do the store, wait for it to complete (which is when verification resolves)
     const budgetChannel = SB.connect(budgetKey)
@@ -48,15 +55,16 @@ async function uploadFile(
 }
 
 await new Command()
-    .name("save.as.shard.ts")
+    .name("384.save.as.shard.ts")
     .version("1.0.0")
     .description("Uploads a file to the specified channel using the provided budget key.")
+    .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
     .option("-k, --key <key:string>", "Budget channel private key", { required: true })
     .option("-f, --file <file:string>", "File path to upload", { required: true })
     .option("-m, --minimal", "Only output minimal handle data", { default: false })
-    .action(async ({ file, key, minimal }) => {
+    .action(async ({ server, file, key, minimal }) => {
         try {
-            await uploadFile(file, key, minimal);
+            await uploadFile(server, file, key, minimal);
         } catch (error) {
             console.error("Error uploading file:", error.message);
             Deno.exit(1);

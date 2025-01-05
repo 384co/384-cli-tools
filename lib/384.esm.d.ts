@@ -119,10 +119,14 @@ export declare class SB384 {
 	 */
 	get userPrivateKey(): SBUserPrivateKey;
 	/**
-	 * Compressed and dehydrated, meaning, 'x' needs to come from another source.
-	 * (If lost it can be reconstructed from 'd')
+	 * Compressed and dehydrated, meaning, 'x' needs to come from another source
+	 * (namely, derived from 'd').
 	 */
 	get userPrivateKeyDehydrated(): SBUserPrivateKey;
+	/**
+	 * Returns private key field 'd' as a binary ArrayBuffer.
+	 */
+	get binaryD(): ArrayBuffer;
 	/**
 	 * Convenience wrapper, returns a promise to new, valid SB384 private key.
 	 * It's essentially short for:
@@ -476,7 +480,6 @@ declare function getObjectKey(fileHashBuffer: BufferSource, salt: ArrayBuffer): 
 export declare function fetchDataFromHandle(handle: ObjectHandle): Promise<ObjectHandle>;
 declare function fetchPayloadFromHandle(h: ObjectHandle): Promise<any>;
 declare function fetchPayload(fileOrObject: SBFile | ObjectHandle): Promise<any>;
-export declare const SBStorageTokenPrefix = "LM2r";
 declare const SB_STORAGE_TOKEN_SYMBOL: unique symbol;
 /**
  * Verbose format of a storage token. In most circumstances, you'll only need
@@ -492,12 +495,34 @@ export interface SBStorageToken {
 	motherChannel?: ChannelId;
 	created?: number;
 	used?: boolean;
+	success?: boolean;
 }
 /**
  * Validates @link{SBStorageToken}, throws if there's an issue.
  * @public
  * */
 export declare function validate_SBStorageToken(data: SBStorageToken): SBStorageToken;
+/**
+ * This is whatever token system the channel server uses.
+ *
+ * For example with 'channel-server', you could command-line bootstrap with
+ * something like:
+ *
+ * '''bash
+ *   wrangler kv:key put --preview false --binding=LEDGER_NAMESPACE "zzR5Ljv8LlYjgOnO5yOr4Gtgr9yVS7dTAQkJeVQ4I7w" '{"used":false,"size":33554432}'
+ *
+ * This is available in the cli.
+ *
+ * @public
+ *
+ */
+export type SBStorageTokenHash = string;
+/**
+ * Generates a new (random) storage token hash in the correct format. Note,
+ * this doesn't 'authorize' the token anywhere or associate it with
+ * a storage amount.
+ */
+export declare function generateStorageToken(): SBStorageTokenHash;
 /**
  * Implements event handling interface, compatible with EventTarget but also
  * supports 'on', 'off', and 'emit'. Note: entirely 'static', so any class
@@ -789,6 +814,10 @@ export declare class ChannelApi extends SBEventTarget {
 		DBG2?: boolean;
 		sbFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 	} | boolean);
+	/** Any operations that require a precise timestamp (such as messages) can use
+		this, to assure both pacing, uniqueness, and monotonically increasing
+		timestamps (on a per-Channel basis)
+		*/
 	static dateNow(): Promise<number>;
 	/**
 	 * Call when somethings been heard from any channel server; this is used to
@@ -830,7 +859,7 @@ export declare class ChannelApi extends SBEventTarget {
 	create(storageToken: SBStorageToken): Promise<ChannelHandle>;
 	/**
 	 * Connects to a channel on this channel server. Returns a @link{Channel}
-	 * objectif no message handler is provided; if onMessage is provided then it
+	 * object unless you provide an onMessage handler, in which case it
 	 * returns a @link{ChannelSocket}.
 	 */
 	connect(handleOrKey: ChannelHandle | SBUserPrivateKey): Channel;
@@ -905,6 +934,13 @@ export declare class HistoryTreeNode<FrozenType> {
 	constructor(isLeaf?: boolean);
 	insertTreeNodeValue(root: HistoryTree<FrozenType>, value: TreeNodeValueType): Promise<void>;
 	traverse(root: HistoryTree<FrozenType>, callback: (node: HistoryTreeNode<FrozenType>) => Promise<void>, reverse?: boolean): Promise<void>;
+	_iterateValues(node: this, reverse: boolean | undefined, residualSkip: number): AsyncIterableIterator<TreeNodeValueType>;
+	/**
+	 * Asynchronously traverses all entries in the tree, defrosting
+	 * as needed, calling _iterateValues() on each.
+	 */
+	traverseGenerator(root: HistoryTree<FrozenType>, from: string, to: string, reverse: boolean | undefined, residualSkip: number): AsyncIterableIterator<TreeNodeValueType>;
+	traverseValuesGenerator(root: HistoryTree<FrozenType>, from: string, to: string, reverse?: boolean, residualSkip?: number): AsyncIterableIterator<TreeNodeValueType>;
 	validate(root: HistoryTree<FrozenType>, valueSize?: number): Promise<void>;
 	_callbackValues(node: HistoryTreeNode<FrozenType>, _nodeCallback?: (value: TreeNodeValueType) => Promise<void>, reverse?: boolean): Promise<void>;
 	traverseValues(root: HistoryTree<FrozenType>, callback?: (value: TreeNodeValueType) => Promise<void>, reverse?: boolean): Promise<void>;
@@ -938,11 +974,16 @@ export declare abstract class HistoryTree<FrozenType> {
 	abstract freeze(data: HistoryTreeNode<FrozenType>): Promise<FrozenType>;
 	abstract deFrost(data: FrozenType): Promise<HistoryTreeNode<FrozenType>>;
 	private insertOrValidateLock;
+	private residualSkip;
 	constructor(branchFactor: number, data?: any);
 	insertTreeNodeValue(value: TreeNodeValueType): Promise<void>;
 	traverse(callback: (node: HistoryTreeNode<FrozenType>) => Promise<void>, reverse?: boolean): Promise<void>;
 	traverseValues(callback?: (value: TreeNodeValueType) => Promise<void>, reverse?: boolean): Promise<void>;
+	traverseValuesGenerator(from: string, to: string, reverse?: boolean): AsyncIterableIterator<TreeNodeValueType>;
+	skip(count: number): HistoryTree<FrozenType>;
 	validate(valueSize?: number): Promise<void>;
+	get from(): string | undefined;
+	get to(): string | undefined;
 	export(): any;
 }
 /**
@@ -972,11 +1013,11 @@ export interface MessageHistory extends TreeNodeValueType {
 	shard: ObjectHandle;
 }
 /**
-* Full deep history feature. If no budget is provided, it will be in read-only
-* mode. Uses Tree with index type 'string' (eg channelId + '_' + subChannel +
-* '_' + timestampPrefix). The 'values' handled by HistoryTree are MessageHistory, and
-* this class will encapsulate shardifying the lowest level, eg 'leaf' nodes
-* with between ~128 and 512 messages.
+* Full deep history ("DH") feature. If no budget is provided, it will be in
+* read-only mode. Uses Tree with index type 'string' (eg channelId + '_' +
+* subChannel + '_' + timestampPrefix). The 'values' handled by HistoryTree are
+* MessageHistory, and this class will encapsulate shardifying the lowest level,
+* eg 'leaf' nodes with between ~128 and 512 messages.
 *
 * Note that the channel server has a parallel class to this ('ChannelHistory')
 *
@@ -990,6 +1031,10 @@ export declare abstract class DeepHistory<FrozenType> extends HistoryTree<Frozen
 	constructor(branchFactor: number, data?: any);
 	freeze(data: HistoryTreeNode<FrozenType>): Promise<FrozenType>;
 	deFrost(handle: FrozenType): Promise<any>;
+	/** returns timestamp form of FIRST message covered by this history (use 'from' for prefix format) */
+	get fromTimestamp(): number | undefined;
+	/** returns timestamp form of LAST message covered by this history (use 'to' for prefix format) */
+	get toTimestamp(): number | undefined;
 }
 export declare abstract class ServerDeepHistory extends DeepHistory<ObjectHandle> {
 	static MESSAGE_HISTORY_BRANCH_FACTOR: number;
@@ -1008,7 +1053,7 @@ export declare class ClientDeepHistory extends DeepHistory<ObjectHandle> {
 	constructor(data: any, channel: Channel);
 	storeData(_data: any): Promise<ObjectHandle>;
 	fetchData(handle: ObjectHandle): Promise<any>;
-	traverseMessages(callback?: (value: Message) => Promise<void>, reverse?: boolean): Promise<void>;
+	traverseMessagesGenerator(from: number, to: number, reverse: boolean): AsyncIterableIterator<Message>;
 	traverseMessagesEncrypted(callback: (id: string, value: ChannelMessage) => Promise<void>): Promise<void>;
 	validate(): Promise<void>;
 }
@@ -1086,9 +1131,10 @@ export interface EnqueuedMessage {
  *
  * ```plaintext
  *     /api/v2/channel/<ID>/getChannelKeys      :     get owner pub key, channel pub key, etc
+ *     /api/v2/channel/<ID>/getHistory          :     returns a deep history of messages
  *     /api/v2/channel/<ID>/getLatestTimestamp  :     latest message timestamp, in prefix format
  *     /api/v2/channel/<ID>/getMessages         :     given keys, get messages
- *     /api/v2/channel/<ID>/getMessageKeys      :     get message keys and history shard
+ *     /api/v2/channel/<ID>/getMessageKeys      :     get message keys
  *     /api/v2/channel/<ID>/getPubKeys          :     returns Map<userId, pubKey>
  *     /api/v2/channel/<ID>/getStorageLimit     :     returns storage limit
  *     /api/v2/channel/<ID>/getStorageToken     :     mint a storage token
@@ -1110,7 +1156,7 @@ export interface EnqueuedMessage {
  *     /api/v2/channel/<ID>/setPage             :     sets the page for the channel
  * ```
  *
- * Details below. There are also a number of wrapper/convenience methods.
+ * There are also a number of wrapper/convenience methods.
  *
  */
 export declare class Channel extends ChannelKeys {
@@ -1189,15 +1235,16 @@ export declare class Channel extends ChannelKeys {
 	 * variety of things. If there is any issue, will return 'undefined', and you
 	 * should probably just ignore that message. Only requirement is you extract
 	 * payload before calling this (some callees needs to, or wants to, fill in
-	 * things in ChannelMessage)
+	 * things in ChannelMessage). If 'dbgOn' is set, will print out
+	 * debugging information.
 	 */
-	extractMessage(msgRaw: ChannelMessage | undefined): Promise<Message | undefined>;
+	extractMessage(msgRaw: ChannelMessage | undefined, dbgOn?: boolean): Promise<Message | undefined>;
 	/**
 	 * Applies 'extractMessage()' to a map of messages.
 	 */
 	extractMessageMap(msgMap: Map<string, ChannelMessage>): Promise<Map<string, Message>>;
 	/**
-	 * Convenience function. Takes either a SBUerId or a SBUserPrivateKey,
+	 * Convenience function. Takes either a SBUserId or a SBUserPrivateKey,
 	 * and will return the SBUserId. Validates along the way. Any issues
 	 * result in returning 'undefined'.
 	 */
@@ -1239,18 +1286,26 @@ export declare class Channel extends ChannelKeys {
 	 * Returns map of message keys from the server corresponding to the request.
 	 * Takes a single optional parameter, which is the time stamp prefix for
 	 * which a set is requested. If not provided, the default is '0' (which
-	 * corresponds to entire history). The return data structure includes the
-	 * map of message keys, and the current history shard (which is 'null' if
-	 * there is none).
+	 * corresponds to entire history). Returns a set of the message keys,
+	 * and the reverse-linked history shard if present.
 	 *
 	 * Note that if the channel is out of budget (eg "frozen" or in "deep
-	 * history" mode), it will return an empty set of keys and the frozen
-	 * history shard.
+	 * history" mode), it will return an empty set of keys (not an error).
+	 *
+	 * Use 'getMessageMap' to get the actual messages from the set of keys.
+	 *
+	 * See 'getHistory' for older message keys.
+	 *
+	 * 'historyShard' is deprecated, and will be removed in a future version;
+	 * currently it just returns an empty object.
+	 *
+	 * 'prefix' is about to be deprectated as well.
+	 *
 	 * @public
 	 */
 	getMessageKeys(prefix?: string): Promise<{
+		historyShard: ObjectHandle | undefined;
 		keys: Set<string>;
-		historyShard: ObjectHandle;
 	}>;
 	/**
 	 * Get raw set of messages from the server. This corresponds to the 'getMessages' server
@@ -1306,9 +1361,19 @@ export declare class Channel extends ChannelKeys {
 	 */
 	getPage(): Promise<any>;
 	/**
-	 * Writes a key-value to the channel. Values can be of any type, up to 4 MiB.
+	 * Writes a key-value to the channel. Values can be any type and are
+	 * mutable.
+	 *
+	 * Size of an individual value can be up to 4 MiB, but note that channel KV
+	 * storage is (much) more expensive than shard/object storage, so you're
+	 * generally better off shardifying large values.
+	 *
+	 * If the channel is out of budget, KV writes allow a small amount of
+	 * "overdraft". This allows you to update small amount of KV state to avoid
+	 * inconsistencies, for example a counter or other summary information.
+	 *
 	 */
-	put(key: any, value: any): Promise<any>;
+	put(key: any, value: any, encrypt?: boolean): Promise<any>;
 	/**
 	 * Reads a key-value from the channel. If key is not found, it will return
 	 * 'undefined'.
@@ -1324,6 +1389,7 @@ export declare class Channel extends ChannelKeys {
 	 * you would call 'localChannel()'
 	 */
 	getCapacity(): Promise<any>;
+	getInfo(): Promise<any>;
 	/**
 	 * Returns a structure with various channel information. Owner only.
 	 * For common pieces of information there various convenience functions.
@@ -1440,8 +1506,12 @@ export declare class Channel extends ChannelKeys {
 	 * 4x time ranges). We append "0000" for future needs, for example if we need
 	 * above 1000 messages per second. Can represent epoch timestamps for the next
 	 * 400+ years. Currently the appended "0000" is stripped/ignored.
+	 *
+	 * Note: '0' will return LOWEST_TIMESTAMP, 'Infinity' will return HIGHEST_TIMESTAMP.
+	 *
+	 * If 'tsNum' is undefined it will return undefined.
 	 */
-	static timestampToBase4String(tsNum: number): string;
+	static timestampToBase4String(tsNum: number | undefined): string | undefined;
 	/**
 	 * Converts the server format (base4) to a string timestamp (ISO format).
 	 */
@@ -1463,11 +1533,12 @@ export declare class Channel extends ChannelKeys {
 	static timestampLongestPrefix: (s1: string, s2: string) => string;
 	static timestampRegex: RegExp;
 	/**
-	 * Reverse of timestampToBase4String. Strict about the format
-	 * (needs to be `[0-3]{26}`), returns 0 if there's any issue.
+	 * Reverse of timestampToBase4String. Strict about the format (needs to be
+	 * `[0-3]{26}`), returns undefined if there's any issue. LOWEST_TIMESTAMP
+	 * will return 0, HIGHEST_TIMESTAMP will return Infinity.
 	 */
-	static base4StringToTimestamp(tsStr: string): number;
-	static base4StringToDate(tsStr: string): string;
+	static base4StringToTimestamp(tsStr: string): number | undefined;
+	static base4StringToDate(tsStr: string): string | undefined;
 	/**
 	 * Teases apart the three elements of a channel message key. Note, this does not
 	 * throw if there's an issue, it just sets all the parts to '', which should
@@ -1658,6 +1729,8 @@ export interface ChannelMessage {
 /**
  * Validates 'ChannelMessage', throws if there's an issue. Checks for a lot
  * of things. It does not explain itself. Don't count on it to catch everything.
+ * Note that you should use the returned value, as this function might fix
+ * some minor things (like converting iv from ArrayBuffer to Uint8Array).
  * @public
  */
 export declare function validate_ChannelMessage(body: ChannelMessage): ChannelMessage;
@@ -2248,6 +2321,155 @@ export declare const utils: {
 	extractPayload: typeof extractPayload;
 	isBase62Encoded: typeof isBase62Encoded;
 };
+/**
+ * (c) 2024 384 (tm)
+ *
+ * AsyncSequence implements general operations on an async sequence of items.
+ *
+ * Transformations:
+ * - map()       : projects each element to another value
+ * - flatMap()   : projects each element to another sequence, then flattens
+ *
+ * Filtering:
+ * - filter()    : filters elements based on a predicate, keeping only those
+ *                 that evaluate to 'true'
+ *
+ * Truncation and Limits:
+ * - take()        : limits the sequence to the first 'n' elements
+ * - takeWhile()   : limits the sequence as long as a predicate is true
+ * - limitUntil()  : similar to 'takeWhile()', but in reverse logic
+ * - skip()        : skips the first 'n' elements, emitting the rest
+ * - skipWhile()   : skips elements as long as a predicate is true
+ * - skipUntil()   : similar to 'skipWhile()', but in reverse logic
+ *
+ * Combining, Merging, Splitting:
+ * - concat()      : concatenates two sequences into one, starting the second
+ *   when the first is done
+ * - merge()       : merges two sequences into one, emitting as soon as any of
+ *   the sources emits
+ * - zip()         : combines two sequences into a single sequence of pairs
+ *
+ * Consumers / Aggregators:
+ * - reduce()      : reduces the sequence to a single value
+ * - toArray()     : collects all elements in the sequence into an array
+ * - find()        : finds the first element that matches a predicate
+ * - any()         : checks if any element in the sequence matches a predicate
+ * - some()        : alias for 'any()'
+ * - every()       : checks if all elements in the sequence match a predicate
+ * - none()        : checks if no elements in the sequence match a predicate
+ * - count()       : counts the number of elements in the sequence
+ * - first()       : returns the first element of the sequence
+ * - last()        : returns the last element of the sequence
+ *
+ */
+export declare class AsyncSequence<T> implements AsyncIterable<T> {
+	private _source?;
+	/**
+	 * Generally available to any subclasses to coordinate
+	 * 'remainders' from any (optimized) skip operations.
+	 */
+	residualSkipValue: number;
+	/**
+	 * Providing source on creation is optional, and it
+	 * can be changed dynamically.
+	 */
+	constructor(_source?: AsyncIterable<T> | undefined);
+	set source(value: AsyncIterable<T>);
+	get source(): AsyncIterable<T>;
+	get residualSkip(): number;
+	set residualSkip(value: number);
+	/**
+	 * Projects each element of the sequence to another value.
+	 */
+	map<U>(fn: (value: T) => U | Promise<U>): AsyncSequence<U>;
+	/** Concatenates (or 'flatens') the sequence, enforces serialization */
+	concatMap<U>(fn: (value: T) => Iterable<U> | AsyncIterable<U>): AsyncSequence<U>;
+	/** Concatenates (or 'flatens') the sequence. Unless overriden, will enforce serialization. */
+	flatMap<U>(fn: (value: T) => Iterable<U> | AsyncIterable<U>): AsyncSequence<U>;
+	/** Same as concatMap() but allows asynchronicity/parallelism. Note implemented in base class. */
+	mergeMap<U>(_fn: (value: T) => Iterable<U> | AsyncIterable<U>): AsyncSequence<U>;
+	filter(predicate: (value: T) => boolean | Promise<boolean>): AsyncSequence<T>;
+	/**
+	 * Yields elements as long as the predicate is true, and then stops.
+	 * Equivalent to 'limitUntil()' with the predicate negated.
+	 */
+	takeWhile(predicate: (value: T) => boolean | Promise<boolean>): AsyncSequence<T>;
+	/** Limits the sequence to the first 'count' elements */
+	take(count: number): AsyncSequence<T>;
+	/**
+	 * Skips elements as long as predicate is true, and then emits the first
+	 * element for which the predicate is false and all subsequent elements. If
+	 * the predicate is false for the first element, the entire sequence will be
+	 * emitted. If the predicate never evaluates to false, the resulting
+	 * sequence will be empty. Equivalent to 'skipUntil()' with the predicate
+	 * negated.
+	 */
+	skipWhile(predicate: (value: T) => boolean | Promise<boolean>): AsyncSequence<T>;
+	/**
+	 * Skips elements as long as the predicate is false. The first element for
+	 * which the predicate is true will be emitted and the sequence will
+	 * continue from there. If the predicate is true for the first element,
+	 * the entire sequence will be emitted. If the predicate never evaluates
+	 * to true, the resulting sequence will be empty. Equivalent to 'skipWhile()'
+	 * with the predicate negated.
+	*/
+	skipUntil(predicate: (value: T) => boolean | Promise<boolean>): AsyncSequence<T>;
+	/** Skips the first 'count' elements */
+	skip(count: number): AsyncSequence<T>;
+	/**
+	 * All elements will be emitted until the predicate evaluates to true, at
+	 * which point the sequence will stop. If the predicate is true for the
+	 * first element, the resulting sequence will be empty. This is the same
+	 * as 'takeWhile()' with the predicate negated.
+	 */
+	limitUntil(predicate: (value: T) => boolean | Promise<boolean>): AsyncSequence<T>;
+	/**
+	 * Concatenates two sequences into one, starting the second when the first
+	 * is done. Note if you have derived classes with optimizations for any
+	 * of the AsyncSequence methods, eg a smarter 'skip()', then those
+	 * will be ignored when using 'concat()' (eg you would need to override
+	 * 'concat()' to make sure that the optimizations are applied).
+	 */
+	concat(other: AsyncSequence<T>): AsyncSequence<Awaited<T>>;
+	/**
+	 * Merge() - merges two sequences into one, emitting as soon as any of the sources emits
+	 */
+	merge(other: AsyncSequence<T>): AsyncSequence<T>;
+	/**
+	 * Combines two sequences into a single sequence of pairs
+	 */
+	zip<U>(other: AsyncSequence<U>): AsyncSequence<[
+		T,
+		U
+	]>;
+	/** Consumes and executes given predicate for each element */
+	forEach(fn: (value: T) => void | Promise<void>): Promise<void>;
+	/** Applies a function against an accumulator and each element in the sequence */
+	reduce<U>(fn: (accumulator: U, value: T) => U | Promise<U>, initialValue: U): Promise<U>;
+	toArray(): Promise<T[]>;
+	/** Returns true if the predicate evaluates to true for ANY element */
+	any(predicate: (value: T) => boolean | Promise<boolean>): Promise<boolean>;
+	/** 'some()' is alias for 'any()' */
+	some(predicate: (value: T) => boolean | Promise<boolean>): Promise<boolean>;
+	/** Returns true if the predicate evaluates to true for EVERY element */
+	every(predicate: (value: T) => boolean | Promise<boolean>): Promise<boolean>;
+	/** Inverse of 'any()', evaluates to true if there is no element for which
+	 * the predicate evaluates to true */
+	none(predicate: (value: T) => boolean | Promise<boolean>): Promise<boolean>;
+	/** Returns the first element for which the predicate evaluates to true */
+	find(predicate: (value: T) => boolean | Promise<boolean>): Promise<T | undefined>;
+	/** Return the first element of the sequence */
+	first(): Promise<T | undefined>;
+	/** Returns the last element of the sequence */
+	last(): Promise<T | undefined>;
+	/** Returns the number of elements in the sequence */
+	count(): Promise<number>;
+	/**
+	 * Given an index 'N', returns the Nth element of the sequence.
+	 */
+	elementAt(index: number): Promise<T | undefined>;
+	[Symbol.asyncIterator](): AsyncIterator<T>;
+}
 /** @public */
 export declare const file: {
 	SBFileSystem: typeof SBFileSystem;
@@ -2415,6 +2637,24 @@ export declare class MessageCache {
 		string
 	];
 }
+/**
+ * Options for ChannelStream.spawn(). Optional start/end are timestamps,
+ * indicating a range (inclusive) of messages to fetch. If 'live' is true,
+ * the stream will continue to fetch new messages as they arrive. Note
+ * that timestamps can be '0' (earliest) or 'Infinity' (latest). If 'start'
+ * is a larger value than 'end', the stream will be in reverse order.
+ *
+ * Note: 'prefix' and 'reverse' are being deprecated (used for 'start()' method).
+ */
+export interface ChannelStreamOptions {
+	start?: number;
+	end?: number;
+	live?: boolean;
+	/** Note: 'prefix' is being deprecated */
+	prefix?: string;
+	/** Note: 'reverse' is being deprecated */
+	reverse?: boolean;
+}
 /** @public */
 export declare class ChannelStream extends Channel {
 	static version: string;
@@ -2423,25 +2663,34 @@ export declare class ChannelStream extends Channel {
 	private channelSocket?;
 	private latestTimestampStr;
 	private messageQueue;
+	streamQueueArray: Map<symbol, MessageQueue<Message>>;
 	sb: ChannelApi;
 	streamStarted: boolean;
+	private restartInProgress;
 	static globalMessageCache: MessageCache;
 	messageCache: MessageCache;
 	constructor();
 	constructor(newChannel: null, protocol: SBProtocol);
 	constructor(key: SBUserPrivateKey, protocol?: SBProtocol);
 	constructor(handle: ChannelHandle, protocol?: SBProtocol);
-	get latestTimeStampDate(): string;
+	get latestTimeStampDate(): string | undefined;
+	/** sees all messages regardless of source; keeps track of
+		latestTimestampStr; returns 'true' if this is a new message
+		('new' from the perspective of the lifetime of this ChannelStream object) */
 	private processMessage;
 	private processSocketMessage;
-	private startRestartSocket;
-	private fetchMessages;
+	startRestartSocket: () => Promise<void>;
+	private updateCacheWithTheseKeys;
+	/** get complete 'DeepHistory' and populate cache with it, from first to last */
+	getChannelHistory(): Promise<void>;
 	/**
-	 * given a prefix, interrogates server about all keys with that prefix;
-	 * then filters them through fetchMessages(). if we're offline, we will
-	 * keep trying until we get a response.
-	 * */
-	private fetchMessageKeys;
+	 * given a prefix, calls Channel.getMessageKeys with that prefix;
+	 * then filters results through fetchMessages(). if we're offline, we will
+	 * keep trying until we get a response. will pass results to
+	 * updateCacheWithTheseKeys() and return the new keys (in array form),
+	 * together with the history shard.
+	 */
+	private syncCacheWithServer;
 	/**
 	 * Simply inherits the channel's method, but will return an ChannelStream
 	 * object.
@@ -2454,7 +2703,6 @@ export declare class ChannelStream extends Channel {
 	static union<T>(setA: Set<T>, setB: Set<T>): Set<T>;
 	static intersection<T>(setA: Set<T>, setB: Set<T>): Set<T>;
 	private feedFromMessageCache;
-	private getChannelHistory;
 	getNewMessages(): AsyncGenerator<Message>;
 	/**
 	 * Start stream of messages from the channel. If prefix is provided, only
@@ -2462,7 +2710,19 @@ export declare class ChannelStream extends Channel {
 	 * timestamp (in which case it's a unique message).  If reverse is true, the
 	 * stream is in reverse. If no prefix is provided, or empty string '' as
 	 * prefix, stream starts from 'now', with whatever is current latest
-	 * message and any upcoming ones.
+	 * message and any upcoming ones (and does not go back through history)
+	 *
+	 * To start from the beginning of time, use prefix '0', which will match
+	 * any possible timestamp prefix.
+	 *
+	 * Nota bene, this returns an AsyncGenerator with type ''Message'':
+	 *
+	 * ```typescript
+	 *
+	 *    # prints all messages in channel, and stays 'live'
+	 *    for await (const m of channelStream.start({ prefix: '0' })) {
+	 *       console.log("Got message:", m)
+	 *    }
 	 *
 	 * Hint on patterns: if you want to first process in reverse for anything
 	 * 'relevant', and then pick it back up going forward, then start your
@@ -2473,12 +2733,19 @@ export declare class ChannelStream extends Channel {
 	 *
 	 * Note it defaults to leaving you connected. You can set option 'live' to
 	 * false, and you will just process all the messages at the time you called 'start'.
+	 * However if you called it with reverse, it will not leave you connected.
+	 *
+	 * Currently, you can't start with both prefix and reverse, eg reverse mode
+	 * is always from latest message and backwards.
+	 *
+	 * NOTE: this is being deprecated in favor of 'spawn'.
 	 */
-	start(options?: {
-		prefix?: string;
-		reverse?: boolean;
-		live?: boolean;
-	}): AsyncGenerator<Message, void, unknown>;
+	start(options?: ChannelStreamOptions): AsyncGenerator<Message, void, unknown>;
+	/**
+	 * Returns an AsyncSequence of messages from the channel. This is the
+	 * newer design to process messages, and will supercede 'start'.
+	 */
+	spawn(options?: ChannelStreamOptions): Promise<AsyncSequence<Message>>;
 	close(): Promise<void>;
 	send(contents: any, options?: MessageOptions): Promise<string>;
 }
@@ -2570,6 +2837,6 @@ export declare function isTextLikeMimeType(mimeType: string): boolean;
  * "384" and "os384" are registered trademarks.
  * https://384.co
  */
-export declare const version = "3.20240726.0";
+export declare const version = "3.20241018.0";
 
 export {};

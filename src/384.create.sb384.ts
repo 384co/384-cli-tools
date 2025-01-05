@@ -7,9 +7,10 @@ const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
     VERSION, SEP, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);
+
 // @deno-types="../lib/384.esm.d.ts"
-//import { SB384 } from "../lib/384.esm.js"
-const { SB384 } = await import(URL_FOR_384_ESM_JS);
+import { SB384 } from "../lib/384.esm.js"
+// const { SB384 } = await import(URL_FOR_384_ESM_JS);
 
 async function newUser(server: string, privateKey?: string) {
     let newUser: SB384

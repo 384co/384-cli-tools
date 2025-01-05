@@ -17,8 +17,8 @@ const {
 } = await import(UTILS_PATH);
 
 // @deno-types="../lib/384.esm.d.ts"
-//import { ChannelApi } from "../lib/384.esm.js"
-const { ChannelApi } = await import(URL_FOR_384_ESM_JS)
+import { ChannelApi } from "../lib/384.esm.js"
+// const { ChannelApi } = await import(URL_FOR_384_ESM_JS)
 
 
 async function shardify(channelServer: string, budgetKey: string, url: string, output: string) {

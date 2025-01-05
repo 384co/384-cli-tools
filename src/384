@@ -1,32 +1,37 @@
 #!/usr/bin/env -S deno run --allow-run --allow-read --allow-env
 
 // (c) 2024, 384 (tm) Inc
-
 // convenience script to run various os384 cli tools as subcommands
 
-const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname;
+
 const {
-    VERSION
+    VERSION, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);
 
+// Create full paths for each subcommand
 const subcommands = {
-    'authorize-channel': '384.authorize.channel.ts',
-    'create-channel': '384.create.channel.ts',
-    'create-sb384': '384.create.sb384.ts',
-    'refresh-token': '384.refresh.token.ts',
-    'shardify-url': '384.shardify.url.ts',
-    'shardify-file': '384.shardify.file.ts',
-    'save-as-shard': '384.save.as.shard.ts',
-    'stream-channel': '384.stream.channel.ts',
+    'authorize-channel': new URL("./384.authorize.channel.ts", import.meta.url).pathname,
+    'create-channel': new URL("./384.create.channel.ts", import.meta.url).pathname,
+    'create-sb384': new URL("./384.create.sb384.ts", import.meta.url).pathname,
+    'refresh-token': new URL("./384.refresh.token.ts", import.meta.url).pathname,
+    'shardify-url': new URL("./384.shardify.url.ts", import.meta.url).pathname,
+    'shardify-file': new URL("./384.shardify.file.ts", import.meta.url).pathname,
+    'save-as-shard': new URL("./384.save.as.shard.ts", import.meta.url).pathname,
+    'stream-channel': new URL("./384.stream.channel.ts", import.meta.url).pathname,
+    'channel-info': new URL("./384.channel.info.ts", import.meta.url).pathname,
+    'publish-page': new URL("./384.publish.page.ts", import.meta.url).pathname,
 };
 
 const args = Deno.args;
 const subcommand = args[0];
 
+console.log("(server: ", DEFAULT_CHANNEL_SERVER, ")")
+
 if (subcommand in subcommands) {
     const scriptPath = subcommands[subcommand];
     const process = Deno.run({
-        cmd: [scriptPath, ...args.slice(1)],
+        cmd: ["deno", "run", "--allow-read", "--allow-write", "--allow-net", "--allow-env", "--allow-import", scriptPath, ...args.slice(1)],
         stdout: 'inherit',
         stderr: 'inherit',
     });
@@ -42,3 +47,50 @@ if (subcommand in subcommands) {
 } else {
     console.log('usage: 384 <subcommand> [args]\n')
 }
+
+
+// #!/usr/bin/env -S deno run --allow-run --allow-read --allow-env
+
+// // (c) 2024, 384 (tm) Inc
+
+// // convenience script to run various os384 cli tools as subcommands
+
+// const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
+// const {
+//     VERSION
+// } = await import(UTILS_PATH);
+
+// const subcommands = {
+//     'authorize-channel': '384.authorize.channel.ts',
+//     'create-channel': '384.create.channel.ts',
+//     'create-sb384': '384.create.sb384.ts',
+//     'refresh-token': '384.refresh.token.ts',
+//     'shardify-url': '384.shardify.url.ts',
+//     'shardify-file': '384.shardify.file.ts',
+//     'save-as-shard': '384.save.as.shard.ts',
+//     'stream-channel': '384.stream.channel.ts',
+//     'channel-info': '384.channel.info.ts',
+// };
+
+// const args = Deno.args;
+// const subcommand = args[0];
+
+// if (subcommand in subcommands) {
+//     const scriptPath = subcommands[subcommand];
+//     const process = Deno.run({
+//         cmd: [scriptPath, ...args.slice(1)],
+//         stdout: 'inherit',
+//         stderr: 'inherit',
+//     });
+//     const { code } = await process.status();
+// } else if(subcommand === 'help' || subcommand === '--help' || subcommand === '-h') {
+//     console.log('usage: 384 <subcommand> [args]\n')
+//     console.log('Available subcommands:')
+//     for (const key in subcommands) {
+//         console.log(`- ${key}`);
+//     }
+// } else if (subcommand === 'version' || subcommand === '--version' || subcommand === '-v') {
+//     console.log(VERSION)
+// } else {
+//     console.log('usage: 384 <subcommand> [args]\n')
+// }

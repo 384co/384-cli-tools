@@ -17,8 +17,8 @@ const {
 } = await import(UTILS_PATH);
 
 // @deno-types="../lib/384.esm.d.ts"
-//import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "../lib/384.esm.js"
-const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(URL_FOR_384_ESM_JS)
+import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "../lib/384.esm.js"
+// const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(URL_FOR_384_ESM_JS)
 
 const MiB = 1024 * 1024
 const TOP_UP_INCREMENT = 256 * MiB // if there is no such channel, fund it by this amount

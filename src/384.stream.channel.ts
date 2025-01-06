@@ -36,10 +36,10 @@ await new Command()
         Reads contents of a channel using stream. You must provide private key (with which to connect).
     `)
     .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
-    .option("-c, --channel <channel:string>", "Private key for the channel.", { required: true })
+    .option("-k, --key <key:string>", "Private key for the channel.", { required: true })
     .option("-l, --live", "Enable live streaming.", { default: false })
-    .action(async ({ server, channel, live }) => {
-        await streamChannel(server, channel, live);
+    .action(async ({ server, key, live }) => {
+        await streamChannel(server, key, live);
         Deno.exit(0);
     })
     .parse(Deno.args);

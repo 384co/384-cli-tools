@@ -9,9 +9,10 @@ const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
     VERSION, URL_FOR_384_ESM_JS, SEP, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);
-// @deno-types="../lib/384.esm.d.ts"
-import { SBStorageToken, ChannelApi } from "../lib/384.esm.js"
-// const { SBStorageToken, ChannelApi } = await import(URL_FOR_384_ESM_JS);
+
+// @deno-types="./384.esm.d.ts"
+// import { SBStorageToken, ChannelApi } from "../lib/384.esm.js"
+const { SBStorageToken, ChannelApi } = await import(URL_FOR_384_ESM_JS);
 
 
 async function simpleCreateChannel(server: string, tokenHash: string) {
@@ -19,7 +20,7 @@ async function simpleCreateChannel(server: string, tokenHash: string) {
     try {
         console.log("This bootstraps from a token; if token has been consumed it'll fail")
         
-        const _storageToken: SBStorageToken = {
+        const _storageToken: typeof SBStorageToken = {
             // note: starts with SBStorageTokenPrefix 'LM2r'
             hash: tokenHash
         }

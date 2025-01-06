@@ -4,7 +4,6 @@
 // convenience script to run various os384 cli tools as subcommands
 
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname;
-
 const {
     VERSION, DEFAULT_CHANNEL_SERVER
 } = await import(UTILS_PATH);

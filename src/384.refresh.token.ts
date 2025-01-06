@@ -16,9 +16,10 @@ const {
     SEP,
     LocalStorage,
 } = await import(UTILS_PATH);
-// @deno-types="../lib/384.esm.d.ts"
-import { ChannelApi, SBStorageToken, utils } from "../lib/384.esm.js"
-// const { ChannelApi, SBStorageToken, utils } = await import(URL_FOR_384_ESM_JS);
+
+// @deno-types="../384.esm.d.ts"
+// import { ChannelApi, SBStorageToken, utils } from "../lib/384.esm.js"
+const { ChannelApi, SBStorageToken, utils } = await import(URL_FOR_384_ESM_JS);
 
 // default size of token created
 const defaultSize = 60 * 1024 * 1024 * 1024 // 60 GB
@@ -57,7 +58,7 @@ export async function refreshToken(server: string, amount: number, tokenHash?: s
             const SBStorageTokenPrefix = 'LM2r' // random prefix
             tokenHash = SBStorageTokenPrefix + utils.arrayBufferToBase62(crypto.getRandomValues(new Uint8Array(32)).buffer);
         }
-        const token: SBStorageToken = {
+        const token: typeof SBStorageToken = {
             hash: tokenHash!,
             used: false,
             size: amount,

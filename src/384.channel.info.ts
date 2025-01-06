@@ -1,20 +1,21 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-net --allow-env
-
-// @deno-types="../lib/384.esm.d.ts"
-import { Channel, ChannelApi, SBUserPrivateKey } from "../lib/384.esm.js"
+#!/usr/bin/env -S deno run --allow-net --allow-env
 
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    DEFAULT_CHANNEL_SERVER
+    DEFAULT_CHANNEL_SERVER, URL_FOR_384_ESM_JS
 } = await import(UTILS_PATH);
+
+// @deno-types="./384.esm.d.ts"
+// import { Channel, ChannelApi, SBUserPrivateKey } from "../lib/384.esm.js"
+const { Channel, ChannelApi, SBUserPrivateKey } = await import(URL_FOR_384_ESM_JS);
 
 /* const SB = */ new ChannelApi(DEFAULT_CHANNEL_SERVER) // side effects
 
 // import { Command } from "https://deno.land/x/cliffy/command/mod.ts";
 import { Command } from 'jsr:@cliffy/command@1.0.0-rc.4';
 
-async function channelInfo(privateKey: SBUserPrivateKey) {
+async function channelInfo(privateKey: typeof SBUserPrivateKey) {
     const c = await new Channel(privateKey).ready
     const i = await c.getAdminData()
 

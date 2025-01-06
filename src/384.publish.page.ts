@@ -5,11 +5,12 @@ import { Command } from 'jsr:@cliffy/command@1.0.0-rc.4';
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    SEP, DEFAULT_CHANNEL_SERVER
+    SEP, DEFAULT_CHANNEL_SERVER, URL_FOR_384_ESM_JS
 } = await import(UTILS_PATH);
 
 // @deno-types="../lib/384.esm.d.ts"
-import { ChannelApi, Channel, browser, utils, isTextLikeMimeType, serverApiCosts } from "../lib/384.esm.js";
+// import { ChannelApi, Channel, browser, utils, isTextLikeMimeType, serverApiCosts } from "../lib/384.esm.js";
+const { ChannelApi, Channel, browser, utils, isTextLikeMimeType, serverApiCosts } = await import(URL_FOR_384_ESM_JS);
 
 const PREFIX_LENGTH = 8;
 
@@ -29,7 +30,7 @@ async function publishFileAsPage(filePath: string, name: string, channelServer: 
 
     const fileName = name || filePath.split('/').pop();
 
-    let pageChannel: Channel;
+    let pageChannel: typeof Channel;
     if (privateKey) {
         pageChannel = await new Channel(privateKey).ready;
         pageChannel.channelServer = channelServer || DEFAULT_CHANNEL_SERVER;

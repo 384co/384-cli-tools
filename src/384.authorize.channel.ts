@@ -13,17 +13,17 @@ const DBG0 = true
 // Dynamic imports, to handle our environment and config possibly living in different places
 const UTILS_PATH = new URL("./utils.lib.ts", import.meta.url).pathname
 const { 
-    VERSION, SEP, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER
+    VERSION, SEP, URL_FOR_384_ESM_JS, DEFAULT_CHANNEL_SERVER, LIB_PATH
 } = await import(UTILS_PATH);
 
-// @deno-types="../lib/384.esm.d.ts"
-import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "../lib/384.esm.js"
-// const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(URL_FOR_384_ESM_JS)
+// @deno-types="./384.esm.d.ts"
+// import { ChannelApi, Channel, ChannelAdminData, SBStorageToken } from "../lib/384.esm.js"
+const { ChannelApi, Channel, ChannelAdminData, SBStorageToken } = await import(URL_FOR_384_ESM_JS)
 
 const MiB = 1024 * 1024
 const TOP_UP_INCREMENT = 256 * MiB // if there is no such channel, fund it by this amount
 
-async function authorizeChannel(channelServer: string, channelKey: string, amount: number, budgetKey?: string, token?: SBStorageToken | string) {
+async function authorizeChannel(channelServer: string, channelKey: string, amount: number, budgetKey?: string, token?: typeof SBStorageToken | string) {
     const SB = new ChannelApi(channelServer, false)
 
     let pageChannel = await new Channel(channelKey).ready
@@ -33,15 +33,15 @@ async function authorizeChannel(channelServer: string, channelKey: string, amoun
         const channelKeys = await pageChannel.getChannelKeys()
         console.log("Channel already exists, and authorized: ", channelKeys)
         // check current storage
-        const storage: ChannelAdminData = await pageChannel.getAdminData()
+        const storage: typeof ChannelAdminData = await pageChannel.getAdminData()
         console.log("Channel storage before operation: ", storage)
         if (token) {
             console.log(SEP, "Adding full token budget to channel ...", SEP)
             if (budgetKey) {
                 const budgetChannel = SB.connect(budgetKey)
-                await budgetChannel.budd({ targetChannel: pageChannel.handle, token: token as SBStorageToken })
+                await budgetChannel.budd({ targetChannel: pageChannel.handle, token: token as typeof SBStorageToken })
             } else {
-                await pageChannel.create(token as SBStorageToken, channelServer);
+                await pageChannel.create(token as typeof SBStorageToken, channelServer);
             }
             console.log("done")
         } else if (storage.storageLimit < amount) {
@@ -63,12 +63,12 @@ async function authorizeChannel(channelServer: string, channelKey: string, amoun
             if (e.message && e.message.includes("No such channel")) {
                 console.log(SEP, "Channel not found, registering and funding ...", SEP)
                 if (token) {
-                    pageChannel = await pageChannel.create(token as SBStorageToken)
+                    pageChannel = await pageChannel.create(token as typeof SBStorageToken)
                     console.log("Channel created (authorized/funded): ", pageChannel.handle)
                 } else if (budgetKey) {
                     const budgetChannel = SB.connect(budgetKey)
                     const storageToken = await budgetChannel.getStorageToken(amount)
-                    pageChannel = await pageChannel.create(storageToken as SBStorageToken)
+                    pageChannel = await pageChannel.create(storageToken as typeof SBStorageToken)
                     console.log("Channel created (authorized/funded): ", pageChannel.handle)
                 } else {
                     console.error("Channel does not exist, and no budget or storage token was provided to create it.");

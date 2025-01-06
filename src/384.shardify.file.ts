@@ -9,7 +9,6 @@
 import { Command } from 'jsr:@cliffy/command@1.0.0-rc.4';
 import * as infer from "jsr:@sigmasd/deno-infer";
 
-
 const DBG0 = true
 
 // Dynamic imports, to handle our environment and config possibly living in different places
@@ -19,8 +18,8 @@ const {
 } = await import(UTILS_PATH);
 
 // @deno-types="../lib/384.esm.d.ts"
-import { ChannelApi } from "../lib/384.esm.js"
-// const { ChannelApi } = await import(URL_FOR_384_ESM_JS)
+// import { ChannelApi } from "./384.esm.js"
+const { ChannelApi } = await import(URL_FOR_384_ESM_JS)
 
 
 async function shardify(channelServer: string, budgetKey: string, filePath: string, output: string) {

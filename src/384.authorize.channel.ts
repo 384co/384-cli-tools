@@ -96,16 +96,16 @@ await new Command()
         the budget amount.
     `)
     .option("-s, --server <server:string>", "(optional) Channel server to use", { default: DEFAULT_CHANNEL_SERVER })
-    .option("-c, --channel <channel:string>", "Channel to authorize", { required: true })
+    .option("-k, --key <key:string>", "Private key for channel to authorize", { required: true })
     .option("-a, --amount <amount:number>", "(optional) Budget amount", { default: TOP_UP_INCREMENT })
     .option("-b, --budget <budget:string>", "Budget channel key", { required: false })
     .option("-t, --token <token:string>", "(optional) Use this storage token instead of the budget channel.", { required: false })
-    .action(async ({ server, channel, amount, budget, token }) => {
+    .action(async ({ server, key, amount, budget, token }) => {
         if (!budget && !token) {
             console.error("Error: You must provide at least one of --budget (-b) or --token (-t)");
             Deno.exit(1);
         }
-        await authorizeChannel(server, channel, amount, budget, token);
+        await authorizeChannel(server, key, amount, budget, token);
         Deno.exit(0);
     })
     .parse(Deno.args);
